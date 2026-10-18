@@ -12,5 +12,158 @@
   "contacts_without_name": 0,
   "eligible_for_outreach": 0,
   "verified_paid_subscriptions": 0,
-  "source_details": "Details held privately within the separate contact database and are not stored in the public source repository."
+  "source_files": {
+    "#00 Family Offices.xlsx": "9a1e259bf526c2d6d528e6052caefb159f4019e058ad6bb47b92a4dcb2c0af26",
+    "#00 Top 50 Family Offices London.xlsx": "a9b04eaf86168179a5ae5d882d8d29b3e31d59317649ed6c208b5c69e365a3d6",
+    "#01 9,000+ Investors.xlsx": "dc9f2fe910c4edc87afec1a127cdc652edabb299732e6defd6edef8c3eda94b6",
+    "#02 London_Seed_Investors_202206_NE.xlsx": "65cef81353f3938d134ed997f26944e58383676a492075d36abcc55220f41d17",
+    "#03 VC database list.xlsx": "d4aa70b0a9941302d02d6d6f291114c6c2986354e0fb449e0f7541ad1a58ac70",
+    "16.5k-master_list_investors.csv": "2c0817e69bba5ba9022c46782c1f2faa0eff03420bda1c21969f3be9fc45c855",
+    "16.5k-master_list_investors.xlsx": "d0be71b74f09b381da533eba0f826f5a04aafce74d96bf0aa6b1adf4c2b1bfd1",
+    "Diadem Capital Investor List.xlsx": "923efd5faeca50beff2e0585cab25a1df2ba7566f485debaac93b69bd27caeee",
+    "Final_Compiled_Investor_List (1).xlsx": "71c15ff16eeb8536989428ccc3c3a1820215a85651ae39a2d0b34a37afd285e4",
+    "Final_Compiled_Investor_List.xlsx": "71c15ff16eeb8536989428ccc3c3a1820215a85651ae39a2d0b34a37afd285e4",
+    "Formatted_NC_Investor_List.xlsx": "58587593e38be8d0da451f07605f7ebea117a2c4a563f3213bde596d1bdfe06b",
+    "Formatted_NC_Investor_List_with_Details.xlsx": "220b08a1b0928a4179c7ad34b77c3547c5dadf634ed950ba3c9e84b345ec3064",
+    "Karoline Angel investors.xlsx": "40110fff1e1057c5e3cf068a0bb6e062c05cc4e06133ba83299abc2abe646801",
+    "NC Investor List.xlsx": "1d74fefde69625a3fb51111dbe54dd962aabf1d79f4bacf5595a7c162525240d",
+    "Top 300 Angel Investors in Middle East (2023_04_10).csv": "c91a0a8de29af450255af52ed4834f35f1ec7daf2717c3f206ac8e914e5495ca",
+    "Top 300 Angel Investors in Middle East (2023_04_10).xlsx": "3dd8686bec0bc77b22a3977903ca58c49f5e6238fe06327227d750352a55d9b6"
+  },
+  "sheets": [
+    {
+      "file": "#00 Family Offices.xlsx",
+      "sheet": "Sheet1",
+      "organization": 823
+    },
+    {
+      "file": "#00 Top 50 Family Offices London.xlsx",
+      "sheet": "Sheet1",
+      "organization": 823,
+      "merged": 823
+    },
+    {
+      "file": "#01 9,000+ Investors.xlsx",
+      "sheet": "9,000+ Investors",
+      "contact": 8020,
+      "organization": 1255,
+      "merged": 430
+    },
+    {
+      "file": "#02 London_Seed_Investors_202206_NE.xlsx",
+      "sheet": "Data",
+      "contact": 881,
+      "organization": 32,
+      "merged": 11
+    },
+    {
+      "file": "#03 VC database list.xlsx",
+      "sheet": "Sheet 1 - Fyma Personalised Inv",
+      "organization": 893,
+      "merged": 5
+    },
+    {
+      "file": "16.5k-master_list_investors.csv",
+      "sheet": "16.5k-master_list_investors.csv",
+      "contact": 16522,
+      "merged": 11,
+      "organization": 1
+    },
+    {
+      "file": "16.5k-master_list_investors.xlsx",
+      "sheet": "master_list_with_names",
+      "contact": 16522,
+      "merged": 16523,
+      "organization": 1
+    },
+    {
+      "file": "Diadem Capital Investor List.xlsx",
+      "sheet": "VC Fund List",
+      "organization": 76,
+      "merged": 1
+    },
+    {
+      "file": "Diadem Capital Investor List.xlsx",
+      "sheet": "Angel Groups",
+      "organization": 259,
+      "merged": 3
+    },
+    {
+      "file": "Final_Compiled_Investor_List (1).xlsx",
+      "sheet": "VC Fund List",
+      "contact": 34,
+      "organization": 200,
+      "merged": 118
+    },
+    {
+      "file": "Final_Compiled_Investor_List (1).xlsx",
+      "sheet": "Angel Investors",
+      "contact": 2348,
+      "merged": 397,
+      "organization": 431,
+      "skipped": 3
+    },
+    {
+      "file": "Final_Compiled_Investor_List.xlsx",
+      "sheet": "VC Fund List",
+      "contact": 34,
+      "merged": 234,
+      "organization": 200
+    },
+    {
+      "file": "Final_Compiled_Investor_List.xlsx",
+      "sheet": "Angel Investors",
+      "contact": 2348,
+      "merged": 2779,
+      "organization": 431,
+      "skipped": 3
+    },
+    {
+      "file": "Formatted_NC_Investor_List.xlsx",
+      "sheet": "Sheet1",
+      "contact": 1897,
+      "merged": 794,
+      "organization": 70,
+      "skipped": 2
+    },
+    {
+      "file": "Formatted_NC_Investor_List_with_Details.xlsx",
+      "sheet": "Sheet1",
+      "contact": 1897,
+      "merged": 854,
+      "organization": 70,
+      "skipped": 2
+    },
+    {
+      "file": "Karoline Angel investors.xlsx",
+      "sheet": "Individuals",
+      "contact": 553,
+      "skipped": 1
+    },
+    {
+      "file": "Karoline Angel investors.xlsx",
+      "sheet": "Groups",
+      "organization": 17
+    },
+    {
+      "file": "NC Investor List.xlsx",
+      "sheet": "InvestorsVC List",
+      "contact": 1897,
+      "merged": 854,
+      "organization": 70,
+      "skipped": 2
+    },
+    {
+      "file": "Top 300 Angel Investors in Middle East (2023_04_10).csv",
+      "sheet": "Top 300 Angel Investors in Middle East (2023_04_10).csv",
+      "contact": 300
+    },
+    {
+      "file": "Top 300 Angel Investors in Middle East (2023_04_10).xlsx",
+      "sheet": "Top 300 Angel Investors in Midd",
+      "contact": 300,
+      "merged": 300
+    }
+  ],
+  "method": "Auto-merge on compatible identity plus identical email or LinkedIn; or identical full name and company without conflicting identifiers. Candidate review for ambiguous same names/company, shared identifiers across different names. Organisation records are separate."
 }

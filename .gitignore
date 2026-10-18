@@ -1,0 +1,23 @@
+# Critical — CRM personal data and raw exports must NEVER be committed
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.csv
+*.xlsx
+*.xls
+*.zip
+*.bak
+*.backup
+*.dump
+*.sql.gz
+exports/
+backups/
+source_data/
+imports/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>N&C Club · Membership Intelligence</title><link rel="stylesheet" href="/styles.css"></head>
+<body>
+<div id="login" class="login-screen hidden">
+  <div class="login-card"><div class="brand-lg">N<span>&</span>C <i>CLUB</i></div><div class="eyebrow">INTERNAL MEMBERSHIP PLATFORM</div><h1>Welcome back.</h1><p class="subline">Sign in to your secure N&C Club workspace.</p><form id="loginForm"><label>Username<input id="loginName" required autocomplete="username" placeholder="Your team username"></label><label>Password<input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••••••"></label><button class="btn primary full" type="submit">Sign in <span>→</span></button></form><div id="loginError" class="error"></div><p class="security-note">Private CRM · authorised team access only</p></div>
+</div>
+<div id="shell" class="shell hidden">
+  <aside class="sidebar" id="sidebar">
+   <div class="brand-area"><div class="brand">N<span>&</span>C <i>CLUB</i></div><div class="brand-caption">MEMBERSHIP INTELLIGENCE</div></div>
+   <div class="section-nav-label">WORKSPACE</div>
+   <nav id="nav"></nav>
+   <div class="sidebar-bottom"><div class="secure"><span class="pulse"></span> LOCAL SECURE WORKSPACE</div><div class="user-area"><div id="userAvatar" class="user-avatar">AD</div><div class="user-meta"><strong id="userName">admin</strong><small id="userRole">Administrator</small></div><button class="logout" id="logoutBtn" title="Sign out">↪</button></div></div>
+  </aside>
+  <div class="maincol">
+   <header class="topbar"><div class="title-wrap"><button class="mobile-menu" id="menuBtn">☰</button><span class="breadcrumb">N&C CLUB / <span id="crumb">OVERVIEW</span></span></div><div class="top-right"><span class="live-label"><span class="pulse"></span> LIVE LOCAL DATA</span><span class="clock" id="today"></span><span class="avatar" id="topAvatar">AD</span></div></header>
+   <main id="main" class="main"></main>
+   <footer class="footer"><span>N&C Club · Membership CRM</span><span>Internal use only • Imported contacts ≠ opted-in members</span></footer>
+  </div>
+</div>
+<div id="drawerBackdrop" class="drawer-backdrop hidden"></div><aside id="drawer" class="drawer hidden"><div id="drawerBody"></div></aside>
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body></html>

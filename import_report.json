@@ -1,0 +1,16 @@
+{
+  "file_count": 16,
+  "sheet_count": 20,
+  "source_rows": 59205,
+  "unique_contacts": 31596,
+  "unique_organizations": 3472,
+  "auto_merged_source_rows": 19575,
+  "org_merged_source_rows": 1549,
+  "potential_duplicate_pairs": 1957,
+  "contacts_missing_email": 9054,
+  "contacts_missing_email_and_phone": 7798,
+  "contacts_without_name": 0,
+  "eligible_for_outreach": 0,
+  "verified_paid_subscriptions": 0,
+  "source_details": "Details held privately within the separate contact database and are not stored in the public source repository."
+}

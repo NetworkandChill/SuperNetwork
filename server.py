@@ -37,10 +37,17 @@ def ensure():
  CREATE INDEX IF NOT EXISTS idx_permitted ON permissions(contact_id,state);
  CREATE TABLE IF NOT EXISTS sessions_info(id TEXT PRIMARY KEY,created_at TEXT);
  ''')
- if not db.execute('SELECT 1 FROM team WHERE username=?',('admin',)).fetchone():
-  password=os.getenv('NC_ADMIN_PASSWORD','')
-  if len(password)<14:sys.exit('FIRST RUN: Set NC_ADMIN_PASSWORD to a strong password (14+ characters). Example: NC_ADMIN_PASSWORD="your unique long secret" python server.py')
+ admin=db.execute('SELECT password_hash FROM team WHERE username=?',('admin',)).fetchone()
+ password=os.getenv('NC_ADMIN_PASSWORD','')
+ if not admin:
+  if len(password)<14:sys.exit('FIRST RUN: Set NC_ADMIN_PASSWORD to a strong password of 14+ characters.')
   db.execute('INSERT INTO team(username,password_hash,role,active) VALUES (?,?,?,1)',('admin',hashpw(password),'Administrator'))
+ elif os.getenv('NC_ADMIN_PASSWORD_SYNC','0')=='1':
+  # An explicit Railway/operator-managed recovery option; never log or display the secret.
+  if len(password)<14:sys.exit('NC_ADMIN_PASSWORD_SYNC requires NC_ADMIN_PASSWORD of 14+ characters.')
+  if not verify(password,admin['password_hash']):
+   db.execute('UPDATE team SET password_hash=?,role=?,active=1 WHERE username=?',(hashpw(password),'Administrator','admin'))
+   db.execute('INSERT INTO audit(actor,action,entity_id,before_json,after_json,occurred_at) VALUES(?,?,?,?,?,?)',('system','admin.password.recovered','admin','{}','{}',now()))
  db.close()
 def audit(db,actor,action,entity='',before=None,after=None):
  db.execute('INSERT INTO audit(actor,action,entity_id,before_json,after_json,occurred_at) VALUES(?,?,?,?,?,?)',(actor,action,entity,json.dumps(before or {},ensure_ascii=False),json.dumps(after or {},ensure_ascii=False),now()))

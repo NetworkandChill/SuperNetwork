@@ -1,0 +1,15 @@
+*.sqlite3
+*.sqlite3-*
+*.db
+*.csv
+*.xlsx
+*.xls
+*.zip
+exports/
+backups/
+source_data/
+.env
+.env.*
+!.env.example
+.git/
+__pycache__/

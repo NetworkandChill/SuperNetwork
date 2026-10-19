@@ -2,30 +2,82 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Super Network CRM — Secure Data Import</title>
 <style>body{margin:0;background:#0b0d0f;color:#f7f5ef;font:15px system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:740px;margin:5vh auto;padding:24px}h1{font-size:27px;font-weight:650;margin:6px 0 10px}.gold{color:#d5b56e}.card{background:#171b1e;border:1px solid #363738;border-radius:14px;padding:24px;margin:20px 0}p{line-height:1.6;color:#b9bdc0}.info{border-left:3px solid #d5b56e;padding-left:15px}.btn{padding:12px 19px;border:1px solid #d5b56e;border-radius:9px;background:#c9ad6f;color:#111;cursor:pointer;font-weight:700}.btn:disabled{opacity:.45;cursor:not-allowed}input{display:block;margin:15px 0;color:inherit;width:100%}a{color:#d5b56e}#result{white-space:pre-wrap;padding:12px;color:#d2d6da}#status{margin-top:15px}.error{color:#ff9f92}.success{color:#a9dbb3}progress{width:100%;height:14px}</style></head>
 <body><main><a href="/">← Return to CRM dashboard</a><div class="gold" style="margin-top:35px;letter-spacing:2px">SUPER NETWORK · N&C CLUB</div><h1>Secure master database import</h1><p>Administrator-only, one-time migration to the live CRM. Source files remain untouched and no contact is automatically authorised for marketing.</p>
-<div class="card"><div class="info"><b>Import validation</b><p>The selected original application ZIP must include the verified database. We verify its SHA-256 fingerprint, complete record counts and SQLite integrity before an atomic import. A pre-import backup is retained.</p></div>
-<p id="auth">Checking administrator access…</p><div id="loginpanel" hidden><label>Username <input id="username" value="admin" autocomplete="username"></label><label>Password <input id="password" type="password" autocomplete="current-password"></label><button id="signin" class="btn" type="button">Sign in as administrator</button></div><label for="file"><strong>Select the original N&C Club CRM ZIP</strong></label><input id="file" type="file" accept=".zip,application/zip"><button id="submit" class="btn" disabled>Import to live CRM</button><progress id="progress" max="100" value="0" hidden></progress><div id="status"></div><div id="result"></div></div><p>Expected database: <strong>31,596 contacts</strong>, 3,472 organisations, 59,205 original source rows and 1,957 duplicate-review candidates. Existing sales-team accounts are preserved. Import cannot run twice or overwrite live contacts.</p></main>
+<div class="card"><div class="info"><b>Import validation</b><p>Select the verified N&C Club master database ZIP. The upload begins after an administrator confirms it. We verify its SHA-256 fingerprint, complete record counts and SQLite integrity before an atomic import. A pre-import backup is retained.</p></div>
+<p id="auth">Checking administrator access…</p><div id="loginpanel" hidden><label>Username <input id="username" value="admin" autocomplete="username"></label><label>Password <input id="password" type="password" autocomplete="current-password"></label><button id="signin" class="btn" type="button">Sign in as administrator</button></div><label for="file"><strong>Select N_C_Club_CRM_Verified_Master_Import.zip</strong></label><input id="file" type="file" accept=".zip,application/zip"><button id="submit" class="btn" type="button">Import selected ZIP</button><progress id="progress" max="100" value="0" hidden></progress><div id="status"></div><div id="result"></div></div><p>Expected database: <strong>31,596 contacts</strong>, 3,472 organisations, 59,205 original source rows and 1,957 duplicate-review candidates. Existing sales-team accounts are preserved. Import cannot run twice or overwrite live contacts.</p></main>
 <script>
-'use strict';let csrf='';const $=id=>document.getElementById(id);function show(s,err=false){$('status').textContent=s;$('status').className=err?'error':'success'}
-let authorised=false;
-function updateButton(){ const file=$('file').files[0]; $('submit').disabled=!file; if(file)show('Selected: '+file.name+' ('+Math.round(file.size/1024/1024)+' MB). '+(authorised?'Ready to import.':'Sign in as administrator before importing.')); }
-$('file').addEventListener('change',updateButton);
-async function checkSession(){
- try{
-  const r=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'});
-  if(!r.ok)throw Error('Your sign-in has expired. Sign in below.');
-  const j=await r.json();if(j.user.role!=='Administrator')throw Error('Administrator access is required.');
-  csrf=j.csrf;authorised=true;$('auth').textContent='Signed in as '+j.user.username+' (Administrator).';$('loginpanel').hidden=true;
- }catch(e){authorised=false;$('auth').textContent=e.message;$('loginpanel').hidden=false;}
- updateButton();
+'use strict';
+const $=id=>document.getElementById(id);
+let csrf='',authorised=false,busy=false,uploaded=false;
+const status=(message,isError=false)=>{const el=$('status');el.textContent=message;el.className=isError?'error':'success';};
+function controls(){
+  $('file').disabled=busy;
+  $('submit').disabled=busy||uploaded;
+  $('submit').textContent=busy?'Importing contacts…':'Import selected ZIP';
 }
-$('signin').onclick=async()=>{
- $('signin').disabled=true;show('Signing in…');
- try{
-  const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({username:$('username').value,password:$('password').value})});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Sign-in failed.');
-  $('password').value='';await checkSession();show(authorised?'Signed in. Select your ZIP to enable the import button.':'Could not verify administrator session.',!authorised);
- }catch(e){show(e.message,true);}finally{$('signin').disabled=false;}
-};
+async function checkSession(){
+  try {
+    const r=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'});
+    if(!r.ok)throw Error('Sign in below to start importing.');
+    const j=await r.json();
+    if(j.user?.role!=='Administrator')throw Error('Administrator access is required.');
+    csrf=j.csrf;authorised=true;
+    $('auth').textContent='Signed in as '+j.user.username+' (Administrator).';
+    $('loginpanel').hidden=true;status('Select the verified CRM ZIP file to start the import.');
+  } catch(err){
+    authorised=false;
+    $('auth').textContent=err.message;
+    $('loginpanel').hidden=false;
+    status('Sign in as admin, then select your database ZIP.');
+  }
+  controls();
+}
+$('signin').addEventListener('click',async()=>{
+  $('signin').disabled=true;status('Signing in…');
+  try {
+    const r=await fetch('/api/auth/login',{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:$('username').value,password:$('password').value})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw Error(j.error||'Invalid login.');
+    $('password').value='';
+    await checkSession();
+    if(authorised&&$('file').files[0])status('Signed in. Click Import selected ZIP to continue.');
+  } catch(err){status(err.message,true);}
+  finally{$('signin').disabled=false;}
+});
+async function beginImport(){
+  const file=$('file').files[0];
+  if(!file){status('First select N_C_Club_CRM_Verified_Master_Import.zip.',true);return;}
+  if(!/\.zip$/i.test(file.name)){status('Please choose a ZIP file, not an extracted folder.',true);return;}
+  if(!authorised){
+    $('loginpanel').hidden=false;
+    status('Please sign in as administrator above. The selected ZIP will stay selected.',true);
+    return;
+  }
+  if(!confirm('Import the verified 31,596 contacts into the hosted CRM? This is a one-time action.'))return;
+  busy=true;controls();$('progress').hidden=false;$('progress').removeAttribute('value');
+  status('Uploading '+file.name+' ('+(file.size/1024/1024).toFixed(1)+' MB). Keep this tab open until complete.');
+  try{
+    const r=await fetch('/api/admin/import-source',{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/octet-stream','X-CSRF-Token':csrf},body:file});
+    let j={};try{j=await r.json();}catch(_){throw Error('The server returned an unreadable response. Check CRM before retrying.');}
+    if(!r.ok)throw Error(j.error||('Import failed: HTTP '+r.status));
+    uploaded=true;$('progress').value=100;
+    $('result').textContent='Verified import completed. '+JSON.stringify(j.counts||{},null,2);
+    status('Import complete. Open the dashboard to review your contacts.');
+  }catch(err){
+    $('progress').hidden=true;
+    status(err.message,true);
+    if(/session|sign in|token/i.test(err.message))await checkSession();
+  }finally{busy=false;controls();}
+}
+$('file').addEventListener('change',()=>{
+  const f=$('file').files[0];
+  if(!f)return;
+  status('Selected '+f.name+' ('+(f.size/1024/1024).toFixed(1)+' MB).');
+  if(authorised)beginImport();
+  else{$('loginpanel').hidden=false;status('ZIP selected. Sign in as administrator, then click Import selected ZIP.');}
+});
+$('submit').addEventListener('click',beginImport);
 checkSession();
-$('submit').onclick=async()=>{const file=$('file').files[0];if(!file)return show('Select the original CRM ZIP first.',true);if(!authorised){show('Please sign in as administrator in the form above before importing.',true);$('loginpanel').hidden=false;return;}if(!confirm('Import the entire verified N&C CRM database? This can only run once.'))return;$('submit').disabled=true;$('progress').hidden=false;$('progress').value=10;show('Uploading and validating the archive…');try{const r=await fetch('/api/admin/import-source',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-CSRF-Token':csrf},body:file});$('progress').value=100;const j=await r.json().catch(()=>({error:'No response from the server.'}));if(!r.ok)throw Error(j.error||'Import failed.');$('result').textContent='Import complete. '+JSON.stringify(j.counts,null,2);show('All source records imported successfully. Open the CRM dashboard to review.');}catch(e){show(e.message,true);updateButton();$('progress').value=0;}};
 </script></body></html>

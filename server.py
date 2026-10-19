@@ -104,6 +104,7 @@ class Handler(BaseHTTPRequestHandler):
    return self.static(path)
   if path=='/api/auth/login' and method=='POST':return self.login()
   if path=='/api/admin/import-source' and method=='POST':return self.import_source()
+  if path=='/api/system/transfer-chunk' and method=='POST':return self.transfer_chunk()
   ss=get_session(self)
   if not ss:raise ApiError(401,'Please sign in')
   user=ss['user']
@@ -153,6 +154,11 @@ class Handler(BaseHTTPRequestHandler):
   try:self.route('POST')
   except ApiError as e:self.json({'error':e.message},e.status)
   except Exception as e:print('Error POST',type(e).__name__,str(e)[:250],file=sys.stderr);self.json({'error':'Server error'},500)
+ def transfer_chunk(self):
+  from transfer_service import transfer_chunk,ImportErrorSafe
+  try:result=transfer_chunk(self,DB,conn,audit,now)
+  except ImportErrorSafe as err:raise ApiError(err.code,err.message)
+  return self.json(result)
  def import_source(self):
   from import_service import perform_import,ImportErrorSafe
   ss=get_session(self)

@@ -7,7 +7,7 @@
 <script>
 'use strict';let csrf='';const $=id=>document.getElementById(id);function show(s,err=false){$('status').textContent=s;$('status').className=err?'error':'success'}
 let authorised=false;
-function updateButton(){ $('submit').disabled=!authorised||!$('file').files.length; }
+function updateButton(){ const file=$('file').files[0]; $('submit').disabled=!file; if(file)show('Selected: '+file.name+' ('+Math.round(file.size/1024/1024)+' MB). '+(authorised?'Ready to import.':'Sign in as administrator before importing.')); }
 $('file').addEventListener('change',updateButton);
 async function checkSession(){
  try{
@@ -27,5 +27,5 @@ $('signin').onclick=async()=>{
  }catch(e){show(e.message,true);}finally{$('signin').disabled=false;}
 };
 checkSession();
-$('submit').onclick=async()=>{const file=$('file').files[0];if(!file)return show('Select the original CRM ZIP first.',true);if(!confirm('Import the entire verified N&C CRM database? This can only run once.'))return;$('submit').disabled=true;$('progress').hidden=false;$('progress').value=10;show('Uploading and validating the archive…');try{const r=await fetch('/api/admin/import-source',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-CSRF-Token':csrf},body:file});$('progress').value=100;const j=await r.json().catch(()=>({error:'No response from the server.'}));if(!r.ok)throw Error(j.error||'Import failed.');$('result').textContent='Import complete. '+JSON.stringify(j.counts,null,2);show('All source records imported successfully. Open the CRM dashboard to review.');}catch(e){show(e.message,true);$('submit').disabled=false;$('progress').value=0;}};
+$('submit').onclick=async()=>{const file=$('file').files[0];if(!file)return show('Select the original CRM ZIP first.',true);if(!authorised){show('Please sign in as administrator in the form above before importing.',true);$('loginpanel').hidden=false;return;}if(!confirm('Import the entire verified N&C CRM database? This can only run once.'))return;$('submit').disabled=true;$('progress').hidden=false;$('progress').value=10;show('Uploading and validating the archive…');try{const r=await fetch('/api/admin/import-source',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-CSRF-Token':csrf},body:file});$('progress').value=100;const j=await r.json().catch(()=>({error:'No response from the server.'}));if(!r.ok)throw Error(j.error||'Import failed.');$('result').textContent='Import complete. '+JSON.stringify(j.counts,null,2);show('All source records imported successfully. Open the CRM dashboard to review.');}catch(e){show(e.message,true);updateButton();$('progress').value=0;}};
 </script></body></html>

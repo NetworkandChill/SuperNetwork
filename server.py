@@ -3,7 +3,7 @@
 Run: NC_ADMIN_PASSWORD='a-long-random-secret' python server.py
 Binds only to loopback by design. Put behind audited HTTPS infrastructure before multi-user remote deployment.
 """
-import os,sys,json,sqlite3,datetime,hashlib,hmac,secrets,base64,time,threading,re,urllib.parse,csv,io,zlib,shutil,lzma
+import os,sys,json,sqlite3,datetime,hashlib,hmac,secrets,base64,time,threading,re,urllib.parse,csv,io,zlib,shutil
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from http.cookies import SimpleCookie
 from pathlib import Path
@@ -15,7 +15,6 @@ if HOST not in ('127.0.0.1','localhost') and os.getenv('NC_ALLOW_REMOTE')!='1':
 if HOST not in ('127.0.0.1','localhost') and not PUBLIC_TLS:
  sys.exit('Remote CRM requires NC_PUBLIC_TLS=1.')
 SESSIONS={};SESSION_LOCK=threading.Lock();FAILED={}
-IMPORT_LOCK=threading.Lock()
 STAGES=['Imported / Unreviewed','Qualified / Ready to Contact','Contact Attempted','Follow-Up Required','Engaged / Responded','Interested in N&C Club','App Invitation Sent','App Registration Started','Registered / Awaiting Approval','Approved N&C Club Member','Paid Member / Converted','Not Interested / Closed','Do Not Contact']
 PROTECTED={'Registered / Awaiting Approval','Approved N&C Club Member','Paid Member / Converted','App Registration Started'}
 TIERS={'Essential':'essential','VIP Lite':'vip_lite','VIP Premier':'vip_premier'}
@@ -44,11 +43,9 @@ def ensure():
   if len(password)<14:sys.exit('FIRST RUN: Set NC_ADMIN_PASSWORD to a strong password of 14+ characters.')
   db.execute('INSERT INTO team(username,password_hash,role,active) VALUES (?,?,?,1)',('admin',hashpw(password),'Administrator'))
  elif os.getenv('NC_ADMIN_PASSWORD_SYNC','0')=='1':
-  # An explicit Railway/operator-managed recovery option; never log or display the secret.
-  if len(password)<14:sys.exit('NC_ADMIN_PASSWORD_SYNC requires NC_ADMIN_PASSWORD of 14+ characters.')
+  if len(password)<14:sys.exit('NC_ADMIN_PASSWORD_SYNC requires a password of 14+ characters.')
   if not verify(password,admin['password_hash']):
    db.execute('UPDATE team SET password_hash=?,role=?,active=1 WHERE username=?',(hashpw(password),'Administrator','admin'))
-   db.execute('INSERT INTO audit(actor,action,entity_id,before_json,after_json,occurred_at) VALUES(?,?,?,?,?,?)',('system','admin.password.recovered','admin','{}','{}',now()))
  db.close()
 def audit(db,actor,action,entity='',before=None,after=None):
  db.execute('INSERT INTO audit(actor,action,entity_id,before_json,after_json,occurred_at) VALUES(?,?,?,?,?,?)',(actor,action,entity,json.dumps(before or {},ensure_ascii=False),json.dumps(after or {},ensure_ascii=False),now()))
@@ -106,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
   if method=='GET' and not path.startswith('/api/'):
    return self.static(path)
   if path=='/api/auth/login' and method=='POST':return self.login()
-  if path=='/api/admin/import-chunk' and method=='POST':return self.import_chunk()
+  if path=='/api/admin/import-source' and method=='POST':return self.import_source()
   ss=get_session(self)
   if not ss:raise ApiError(401,'Please sign in')
   user=ss['user']
@@ -156,91 +153,16 @@ class Handler(BaseHTTPRequestHandler):
   try:self.route('POST')
   except ApiError as e:self.json({'error':e.message},e.status)
   except Exception as e:print('Error POST',type(e).__name__,str(e)[:250],file=sys.stderr);self.json({'error':'Server error'},500)
- def import_chunk(self):
-  # Administrator-only bulk import: normal authenticated session and CSRF protection.
+ def import_source(self):
+  from import_service import perform_import,ImportErrorSafe
   ss=get_session(self)
   if not ss:raise ApiError(401,'Please sign in')
-  auth_role(ss['user'],'Administrator')
-  if self.headers.get('X-CSRF-Token')!=ss['csrf']:raise ApiError(403,'Invalid CSRF token')
-  sid=os.getenv('NC_IMPORT_SESSION','')
-  if self.headers.get('X-CRM-Import-Session')!=sid or len(sid)<16:raise ApiError(403,'Invalid import session')
-  if self.headers.get('Content-Type')!='application/octet-stream':raise ApiError(415,'Binary data required')
   try:
-   length=int(self.headers.get('Content-Length','0'))
-   seq=int(self.headers.get('X-Import-Sequence','-1'))
-   total=int(self.headers.get('X-Import-Total','0'))
-  except ValueError:raise ApiError(400,'Invalid import metadata')
-  if not (1<=length<=2200000 and 0<=seq<total<=80):raise ApiError(413,'Import block or count invalid')
-  checksum=self.headers.get('X-Import-Block-Sha256','')
-  fullsum=self.headers.get('X-Import-Full-Sha256','')
-  if not (re.fullmatch(r'[0-9a-f]{64}',checksum) and re.fullmatch(r'[0-9a-f]{64}',fullsum)):raise ApiError(400,'Invalid checksum')
-  with IMPORT_LOCK:
-   p=DB.parent;part=p/'.supernetwork-import.xz';statefile=p/'.supernetwork-import.json'
-   if (p/'.supernetwork-import.complete').exists():raise ApiError(409,'Import already completed')
-   try:state=json.loads(statefile.read_text()) if statefile.exists() else {'next':0,'total':total,'full_sha256':fullsum}
-   except:raise ApiError(409,'Invalid import state')
-   if state['total']!=total or state['full_sha256']!=fullsum:raise ApiError(409,'This is not the active import')
-   if seq!=state['next']:
-    if seq==state['next']-1 and checksum==state.get('last_checksum'):
-     return self.json({'ok':True,'sequence':seq,'next':state['next'],'retry':True})
-    raise ApiError(409,f'Expected import block {state["next"]}')
-   b=self.rfile.read(length)
-   if len(b)!=length or hashlib.sha256(b).hexdigest()!=checksum:raise ApiError(400,'Import block checksum mismatch')
-   with open(part,'ab') as handle:
-    handle.write(b);handle.flush();os.fsync(handle.fileno())
-   state.update(next=seq+1,last_checksum=checksum)
-   statefile.write_text(json.dumps(state))
-   if seq!=total-1:return self.json({'ok':True,'sequence':seq,'next':state['next']})
-   with open(part,'rb') as whole:
-    if hashlib.file_digest(whole,'sha256').hexdigest()!=fullsum:raise ApiError(400,'Import archive checksum mismatch')
-   temp=p/'.supernetwork-source.sqlite3'
-   try:
-    # 45 MB clean consolidated source DB; cap expansion to prevent decompression bombs.
-    size=0
-    with lzma.open(part,'rb') as src,open(temp,'wb') as out:
-     while True:
-      chunk=src.read(1024*1024)
-      if not chunk:break
-      size+=len(chunk)
-      if size>100*1024*1024:raise ApiError(413,'Source database exceeds size limit')
-      out.write(chunk)
-    source=sqlite3.connect(f'file:{temp}?mode=ro',uri=True)
-    try:
-     valid=source.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
-     required={'contacts':31596,'organizations':3472,'source_rows':59205,'aliases':28262,'duplicate_candidates':1957,'merge_log':19575,'import_batches':20}
-     counts={t:source.execute('SELECT COUNT(*) FROM '+t).fetchone()[0] for t in required}
-    finally:source.close()
-    if not valid or counts!=required:raise ApiError(422,'Source integrity or record-count validation failed')
-    live=conn()
-    try:
-     if live.execute('SELECT COUNT(*) FROM contacts').fetchone()[0]:raise ApiError(409,'CRM already has records; refusing to overwrite')
-     # Durable pre-import backup, followed by an atomic database transaction.
-     backup=sqlite3.connect(p/'pre-import-backup.sqlite3')
-     try:live.backup(backup)
-     finally:backup.close()
-     live.execute('ATTACH DATABASE ? AS imported',(str(temp),))
-     try:
-      live.execute('BEGIN IMMEDIATE')
-      for table in ['organizations','contacts','source_rows','aliases','duplicate_candidates','merge_log','import_batches']:
-       live.execute('INSERT INTO main.'+table+' SELECT * FROM imported.'+table)
-      # Preserve any existing central suppression records, including re-import blocks.
-      for row in live.execute('SELECT kind,value FROM suppression'):
-       if row['kind'] in ('email','phone','linkedin'):
-        live.execute('UPDATE contacts SET do_not_contact=1,eligible_for_outreach=0,status="Do Not Contact" WHERE '+('email=? OR additional_email=?' if row['kind']=='email' else 'phone=?' if row['kind']=='phone' else 'linkedin=?'),(row['value'],row['value']) if row['kind']=='email' else (row['value'],))
-      audit(live,'system','import.completed','master',{},counts)
-      live.execute('COMMIT')
-     except:
-      live.execute('ROLLBACK');raise
-     finally:live.execute('DETACH DATABASE imported')
-    finally:live.close()
-    (p/'.supernetwork-import.complete').write_text(json.dumps({'at':now(),'counts':counts,'sha256':fullsum}))
-    statefile.unlink(missing_ok=True);part.unlink(missing_ok=True);temp.unlink(missing_ok=True)
-    return self.json({'ok':True,'complete':True,'counts':counts})
-   except Exception:
-    # Retain partial archive and state for troubleshooting. Never leak record contents in errors.
-    raise
+   result=perform_import(self,DB,conn,audit,now,ss)
+  except ImportErrorSafe as err:raise ApiError(err.code,err.message)
+  return self.json(result)
  def static(self,path):
-  files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'}
+  files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css','/import.html':'import.html'}
   if path not in files:raise ApiError(404,'Not found')
   fp=ROOT/'web'/files[path];blob=fp.read_bytes();self.send_response(200);self.headers_common();self.send_header('Content-Type',('application/javascript' if fp.suffix=='.js' else 'text/css' if fp.suffix=='.css' else 'text/html')+'; charset=utf-8');self.send_header('Content-Length',str(len(blob)));self.end_headers();self.wfile.write(blob)
  def login(self):
